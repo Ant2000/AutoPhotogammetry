@@ -104,5 +104,39 @@ void setup()
 
 void loop() 
 {
-  
+    lcd.clear();
+  for(i = 0; i < layers; i++)
+  {
+    for(j = 0; j < rounds; j++)
+    {
+      
+      for(k = 0; k < pics_per_round; k++)
+      {
+        stepper.step(image_step);
+        delay(100);
+        click(500);
+        pics++;
+        updateLCD();
+        key = keypad.getKey();
+        if(key == '#')
+        {
+          lcd.setCursor(0,0);
+          lcd.clear();
+          lcd.print("Confirm stop: ");
+          lcd.setCursor(0, 1);
+          while(1)
+          {
+             key = keypad.getKey();
+             if(key)
+             {
+               if(key == '#')
+                 digitalWrite(7, LOW);
+               if(key == '*')
+                 break;
+             }
+          }
+        } 
+      }
+    }
+  }
 }
