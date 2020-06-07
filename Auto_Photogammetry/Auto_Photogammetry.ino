@@ -2,23 +2,27 @@
 #include <LiquidCrystal_I2C.h>
 #include <Keypad.h>
 #include <Stepper.h>
+#include <NikonRemote.h>
 
-const int steprev = 4096;
-Stepper stepper = Stepper(steprev, 3,5,4,6);
+NikonRemote remote( 2 );
+
+const unsigned int steprev = 2048;
+Stepper stepper = Stepper(steprev, 3, 5, 4, 6);
 
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 char keys[4][4] = {
-    {'1','2','3','A'},
-    {'4','5','6','B'},
-    {'7','8','9','C'},
-    {'*','0','#','D'}
+    {'D','#','0','*'},
+    {'C','9','8','7'},
+    {'B','6','5','4'},
+    {'A','3','2','1'}
   };
-byte rowPins[4] = {A3,A2,A1,A0};
-byte colPins[4] = {8,9,10,11};
+byte rowPins[4] = {A3, A2, A1, A0};
+byte colPins[4] = {8, 9, 10, 11};
 char key;
 Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, 4, 4);
 
-unsigned int x, temp, layers, rounds, pics_per_round;
+unsigned int x, temp, layers, rounds, pics_per_round, image_step, pics = 0;
+unsigned int i, j, k;
 
 void clearLCDlower()
 {
@@ -67,18 +71,29 @@ int keypadInput(int over)
   }
 }
 
-void click(int d)
+void click1()
 {
-  digitalWrite(2, 1);
-  delay(d);
-  digitalWrite(2, 0);
-  x=0;
+  remote.click();
+  delay(5000);
+}
+
+void updateLCD()
+{
+  lcd.setCursor(0,0);
+  lcd.print("Layer:");
+  lcd.print(i + 1);
+  lcd.print(" Round:");
+  lcd.print(j + 1);
+  lcd.setCursor(0,1);
+  lcd.print("Pics Taken: ");
+  lcd.print(pics);
 }
 
 void setup() 
 {
-  pinMode(2, OUTPUT);
-  digitalWrite(2, LOW);
+  stepper.setSpeed(1);
+  digitalWrite(7, HIGH);
+  pinMode(7, OUTPUT);
   Serial.begin(9600);
   lcd.begin(16, 2);
   lcd.backlight();
@@ -98,23 +113,24 @@ void setup()
   lcd.setCursor(0, 0);
   lcd.print("Rounds(1~10):");
   clearLCDlower();
-  pics_per_round = keypadInput(10);
+  rounds = keypadInput(10);
   Serial.println(pics_per_round);
+  image_step = round(steprev / pics_per_round);
+  Serial.println(image_step);
 }
 
 void loop() 
 {
-    lcd.clear();
+  lcd.clear();
   for(i = 0; i < layers; i++)
   {
     for(j = 0; j < rounds; j++)
     {
-      
       for(k = 0; k < pics_per_round; k++)
       {
         stepper.step(image_step);
         delay(100);
-        click(500);
+        click1();
         pics++;
         updateLCD();
         key = keypad.getKey();
@@ -138,5 +154,39 @@ void loop()
         } 
       }
     }
+    if(i < layers - 1)
+    {
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Pics: ");
+      lcd.print(pics);
+      lcd.setCursor(0, 1);
+      lcd.print("Change Layer");
+      while(1)
+      {
+        key = keypad.getKey();
+        if(key)
+        {
+          if(key == '#')
+            digitalWrite(7, LOW);
+          if(key == '*')
+            break;
+        }
+      }
+    }
+  }
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("All pictures");
+  lcd.setCursor(0, 1);
+  lcd.print("taken: ");
+  lcd.print(pics);
+  while(1)
+  {
+     key = keypad.getKey();
+     if(key)
+     {
+       digitalWrite(7,LOW);
+     }
   }
 }
